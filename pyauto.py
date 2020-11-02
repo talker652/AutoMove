@@ -11,12 +11,13 @@ import pytesseract as pyocr
 
 timeFlag = 0
 escFlag = 0
+skill_flag = [0] * 4
 
 def Exit():
     global escFlag
     while escFlag == 0:  # making a loop
         try:  
-            if keyboard.is_pressed('q'):  
+            if keyboard.is_pressed('ESC'):  
                 escFlag = 1
                 break  
             else:
@@ -27,10 +28,14 @@ def Exit():
 
 def FlagController():
     global timeFlag
-    while timeFlag <= 2:
+    global skill_flag
+    while escFlag == 0:
         time.sleep(1)
-        timeFlag += 1
-        print(timeFlag)
+        for i in range(len(skill_flag)):
+            skill_flag[i] -= 1
+            if skill_flag[i] < 0:
+                skill_flag[i] = 0
+        print(skill_flag)
 
 
 def show(im, islist = False):
@@ -76,37 +81,23 @@ def FindRed(img) :
         point_list.append(point)
     return rtimg, point_list
 
-def MouseMove(angle) :
-    pag.moveRel(angle*2, 0, abs(float(angle/180)))
-
-def KeyboardPress(dist):
-    time = float(dist/100)
-    print('Press Time = %f' %time)
-    pag.press('w', interval=time)
-
-def Act(angle, dist):
-    MouseMove(angle)
-    KeyboardPress(dist)
-
-def AutoMove() :
-    center = [303, 294]
-    red = cv2.imread('red.png')
-    img, point_list = FindRed(red)
-    for point in point_list:
-        angle, dist = AngleAndDistance(center, point)
-        print(angle)
-        print(dist)
-        Act(angle, dist)
-    Act(0,200)
-    time.sleep(1)
     
 def CatchScreen(x, y, w, h):
     tStart = time.time()
     im = pag.screenshot('screen.png',region=(x, y, w, h))
+    img = cv2.imread('screen.png')
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    # threshold = cv2.adaptiveThreshold(img, 255, cv2.THRESH_BINARY, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 11, 7)
+    # _ , threshold = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+    img = cv2.resize(img, (300, 92))
+    text = pyocr.image_to_string(img, lang='chi_tra', config='--psm 7 --oem 3')
     tEnd = time.time()
-    print('ScreenShot Time = ' + str(float(tEnd - tStart)))
+    print('Total OCR Time = ' + str(float(tEnd - tStart)))
+    print(text.replace(' ', ''))
+    # print('ScreenShot Time = ' + str(float(tEnd - tStart)))
     # im.show()
-    return im
+    # show(img)
+    return text.replace(' ', '')
 
 def GetScreenPos():
     global timeFlag
@@ -116,30 +107,74 @@ def GetScreenPos():
         print('%f, %f' %(x,y))
 
 
-if __name__ == "__main__":
+def MouseMove(angle) :
+    pag.moveRel(angle*2, 0, abs(float(angle/180)))
 
-    print('Press Q to exit')
+def KeyboardPress(dist):
+    time = float(dist/100)
+    print('Press Time = %f' %time)
+    pag.press('w', interval=time)
+
+def Skill (i = -1, key = None, time = 0):
+    global skill_flag
+    if i == -1:
+        if skill_flag[0] == 0:
+            pag.press('t')
+            skill_flag[0] = 500 
+        elif skill_flag[0] == 0:
+            pag.press('f')
+            skill_flag[0] = 10 
+        elif skill_flag[0] == 0:
+            pag.press('!')
+            skill_flag[0] = 5 
+        elif skill_flag[0] == 0:
+            pag.press('n')
+            skill_flag[0] = 15 
+        elif skill_flag[0] == 0:
+            pag.press('r')
+            skill_flag[0] = 26 
+        else :
+            pass
+    else :
+        pag.press(key)
+        skill_flag[i] = time
+
+def Act(angle, dist):
+    MouseMove(angle)
+    KeyboardPress(dist)
+    print('Move To dir:%.0f dist:%.0f' %(angle, dist))
+
+def AutoMove() :
+    # center = [303, 294]
+    # red = cv2.imread('red.png')
+    # img, point_list = FindRed(red)
+    text = CatchScreen(880, 33 , 85, 23)
+    time.sleep(1)
+    
+    # for point in point_list:
+    #     angle, dist = AngleAndDistance(center, point)
+    #     Act(angle, dist)
+    # time.sleep(1)
+
+
+if __name__ == "__main__":
+    # GetScreenPos() # 818 33 1026 63
+    # text = CatchScreen(842, 38 , 130, 16)
+
+    print('Press ESC to exit')
     flagThread = threading.Thread(target = FlagController, args = ())
     flagThread.start()
 
     escThread = threading.Thread(target = Exit, args = ())
     escThread.start()
 
-    # GetScreenPos()
-    tStart = time.time()
-
-    screen = CatchScreen(639,6 , 165, 15)
-    text = pyocr.image_to_string(screen)
-    tEnd = time.time()
-    print('Total OCR Time = ' + str(float(tEnd - tStart)))
-    print(text)
-
     # AutoMove()
     moveFlag = 0
     while escFlag == 0:  # making a loop
         try:  
-            if keyboard.is_pressed('enter'):  
+            if keyboard.is_pressed('/'):  
                 moveFlag = 1
+                print('Start')
                 break  
             else:
                 pass
