@@ -1,8 +1,23 @@
 import pyautogui as pag
 import keyboard
+import mouseinfo
 from cv2 import cv2 as cv2
 import numpy as np
 from PIL import Image
+import time
+import threading
+from cv2 import cv2 as cv2
+import pytesseract as pyocr
+
+timeFlag = 0
+
+def FlagController():
+    global timeFlag
+    while timeFlag <= 2:
+        time.sleep(1)
+        timeFlag += 1
+        print(timeFlag)
+
 
 def show(im, islist = False):
 	if islist:
@@ -14,7 +29,8 @@ def show(im, islist = False):
 		testimage.show()
 
 def MouseMove(angle) :
-        pag.moveRel(angle*2,0,1)
+    pag.moveRel(angle*2, 0, abs(float(angle/180)))
+
 
 def Angle(point1, point2) :
     vec1 = np.array([0,-10])
@@ -59,15 +75,39 @@ def AutoMove() :
         print(angle)
         MouseMove(angle)
     
+def CatchScreen(x, y, w, h):
+    tStart = time.time()
+    im = pag.screenshot('screen.png',region=(x, y, w, h))
+    tEnd = time.time()
+    print('ScreenShot Time = ' + str(float(tEnd - tStart)))
+    # im.show()
+    return im
 
-
+def GetScreenPos():
+    global timeFlag
+    while timeFlag <= 2:
+        x,y = pag.position()
+        # print('%f, %f' %(x,y))
 
 
 if __name__ == "__main__":
-    AutoMove()
+
+    thread = threading.Thread(target = FlagController, args = ())
+    thread.start()
+
+    # GetScreenPos()
+    tStart = time.time()
+    screen = CatchScreen(639,6 , 165, 15)
+    text = pyocr.image_to_string(screen)
+    tEnd = time.time()
+    print('Total OCR Time = ' + str(float(tEnd - tStart)))
+    print(text)
+
+    # AutoMove()
+    
     # while True:  # making a loop
     #     try:  # used try so that if user pressed other than the given key error will not be shown
-    #         if keyboard.is_pressed('enter'):  # if key 'q' is pressed 
+    #         if keyboard.is_pressed('enter'):  # if key 'enter' is pressed 
     #             AutoMove()
     #             break  # finishing the loop
     #         else:
