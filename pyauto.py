@@ -10,6 +10,20 @@ from cv2 import cv2 as cv2
 import pytesseract as pyocr
 
 timeFlag = 0
+escFlag = 0
+
+def Exit():
+    global escFlag
+    while escFlag == 0:  # making a loop
+        try:  
+            if keyboard.is_pressed('q'):  
+                escFlag = 1
+                break  
+            else:
+                time.sleep(0.5)
+                pass
+        except:
+            break  
 
 def FlagController():
     global timeFlag
@@ -28,11 +42,7 @@ def show(im, islist = False):
 		testimage = Image.fromarray(im)
 		testimage.show()
 
-def MouseMove(angle) :
-    pag.moveRel(angle*2, 0, abs(float(angle/180)))
-
-
-def Angle(point1, point2) :
+def AngleAndDistance(point1, point2) :
     vec1 = np.array([0,-10])
     dx = point2[0] - point1[0]
     dy = point2[1] - point1[1]
@@ -45,7 +55,7 @@ def Angle(point1, point2) :
     if point2[0] - point1[0] < 0:
         angle2 *= -1
     # print(angle2)
-    return angle2
+    return angle2, Lv2
 
 
 def FindRed(img) :
@@ -66,14 +76,29 @@ def FindRed(img) :
         point_list.append(point)
     return rtimg, point_list
 
+def MouseMove(angle) :
+    pag.moveRel(angle*2, 0, abs(float(angle/180)))
+
+def KeyboardPress(dist):
+    time = float(dist/100)
+    print('Press Time = %f' %time)
+    pag.press('w', interval=time)
+
+def Act(angle, dist):
+    MouseMove(angle)
+    KeyboardPress(dist)
+
 def AutoMove() :
     center = [303, 294]
     red = cv2.imread('red.png')
     img, point_list = FindRed(red)
     for point in point_list:
-        angle = Angle(center, point)
+        angle, dist = AngleAndDistance(center, point)
         print(angle)
-        MouseMove(angle)
+        print(dist)
+        Act(angle, dist)
+    Act(0,200)
+    time.sleep(1)
     
 def CatchScreen(x, y, w, h):
     tStart = time.time()
@@ -86,17 +111,23 @@ def CatchScreen(x, y, w, h):
 def GetScreenPos():
     global timeFlag
     while timeFlag <= 2:
+        time.sleep(0.5)
         x,y = pag.position()
-        # print('%f, %f' %(x,y))
+        print('%f, %f' %(x,y))
 
 
 if __name__ == "__main__":
 
-    thread = threading.Thread(target = FlagController, args = ())
-    thread.start()
+    print('Press Q to exit')
+    flagThread = threading.Thread(target = FlagController, args = ())
+    flagThread.start()
+
+    escThread = threading.Thread(target = Exit, args = ())
+    escThread.start()
 
     # GetScreenPos()
     tStart = time.time()
+
     screen = CatchScreen(639,6 , 165, 15)
     text = pyocr.image_to_string(screen)
     tEnd = time.time()
@@ -104,13 +135,26 @@ if __name__ == "__main__":
     print(text)
 
     # AutoMove()
+    moveFlag = 0
+    while escFlag == 0:  # making a loop
+        try:  
+            if keyboard.is_pressed('enter'):  
+                moveFlag = 1
+                break  
+            else:
+                pass
+        except:
+            break  
     
-    # while True:  # making a loop
-    #     try:  # used try so that if user pressed other than the given key error will not be shown
-    #         if keyboard.is_pressed('enter'):  # if key 'enter' is pressed 
-    #             AutoMove()
-    #             break  # finishing the loop
-    #         else:
-    #             pass
-    #     except:
-    #         break  # if user pressed a key other than the given key the loop will break
+    while escFlag == 0:  # making a loop
+        try:  
+            if moveFlag == 1:
+                AutoMove()
+            else:
+                pass
+        except:
+            break  
+    
+
+    flagThread.join()
+    escThread.join()
