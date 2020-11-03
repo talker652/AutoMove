@@ -13,7 +13,7 @@ from cv2 import cv2 as cv2
 import pytesseract as pyocr
 
 escFlag = 0
-skill_flag = [0] * 6
+skill_flag = [0] * 6 # skill 4 = buff
 shift_flag = 0
 speed = 0
 center = [300, 300] 
@@ -184,31 +184,31 @@ def Map() :
     text = '火山口M吐'
     ret = -1
     if '汪四' in text or '野' in text:
-        print('Map:颶風荒野')
+        print('Map1:颶風荒野')
         ret = 1
     elif '同' in text or '祭壇' in text:
-        print('Map:風化祭壇')
+        print('Map2:風化祭壇')
         ret = 2
     elif '深海' in text or '瀑布' in text or '了放' in text or '計生' in text:
-        print('Map:深海瀑布')
+        print('Map3:深海瀑布')
         ret = 3
     elif '火山' in text or '口' in text or '國' in text:
-        print('Map:火山口地面')
+        print('Map4:火山口地面')
         ret = 4
     elif 'pm' in text or 'um' in text or '開' in text:
-        print('Map:銀光藤蔓')
+        print('Map5:銀光藤蔓')
         ret = 5
     elif '俘' in text or '審' in text:
-        print('Map:俘虜的審判')
+        print('Map6:俘虜的審判')
         ret = 6
     elif '由記' in text or '由六' in text or '由訂' in text:
-        print('Map:沙沼')
+        print('Map7:沙沼')
         ret = 7
     elif '下和' in text or '下生' in text:
-        print('Map:遇難船隻')
+        print('Map8:遇難船隻')
         ret = 8
     elif '陽' in text or '景' in text or '台' in text:
-        print('Map:夕陽觀景台')
+        print('Map0:夕陽觀景台')
         ret = 0
     else :
         print('no recg')
@@ -221,6 +221,7 @@ def Atttack(enemy) :
 
 def State0 () :
     global center, state
+    print('state0')
     door = [center[0], center[1] + 150]
     MoveTo(center, door)                # 貼門
     pag.click(x=500, y=500, duration=2) # 點擊進入
@@ -229,6 +230,7 @@ def State0 () :
 
 def State1 () :
     global center, state
+    print('state1')
     mapNo = Map()
     if mapNo == 1:
         point = [10, -200]
@@ -260,12 +262,13 @@ def State1 () :
     Skill(0, 'f', 10)
     point = [0, 30]
     MoveTo(center, point)
-    pag.press('z', presses=3, interval=0.5)
+    pag.press('z', presses=3, interval=0.8)
     state += 1
 
 
 def State2 () :
     global center, state
+    print('state2')
     text = CatchScreen(250, 500, 150,50) # F12的框框
     if len(text) != 0:      # 有F12
         pag.press('f12')
@@ -281,14 +284,26 @@ def State2 () :
         state += 1
 
 def State3  () :
-    global state
+    global state, center
+    print('state3')
     img = CatchMap(830, 60, 130, 130)        # 填入地圖位置
     enemy = FindRed(img)
-    if len(enemy) > 0 :
-        Atttack(enemy[-1])
-    else :
+    if len(enemy) > 0:
+        while len(enemy) > 0 :
+            Atttack(enemy[-1])
+            img = CatchMap(830, 60, 130, 130)        # 填入地圖位置
+            enemy = FindRed(img)
+        time.sleep(2)
         state = 2
-        time.sleep(1)
+    else :
+        map = Map()
+        if map == 1 or map == 2 or map == 5 or map == 8:
+            door = [0, 200]
+            MoveTo(center, door)
+        else :
+            door = [0, -200]
+            MoveTo(center, door)
+        state = 1
 
 
 def AutoMove() :
