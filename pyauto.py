@@ -1,3 +1,6 @@
+# https://yanwei-liu.medium.com/pyautogui-%E4%BD%BF%E7%94%A8python%E6%93%8D%E6%8E%A7%E9%9B%BB%E8%85%A6-662cc3b18b80
+# https://pyautogui.readthedocs.io/en/latest/keyboard.html
+
 import pyautogui as pag
 import keyboard
 import mouseinfo
@@ -9,9 +12,14 @@ import threading
 from cv2 import cv2 as cv2
 import pytesseract as pyocr
 
-timeFlag = 0
 escFlag = 0
-skill_flag = [0] * 4
+skill_flag = [0] * 6
+shift_flag = 0
+speed = 0
+center = [300, 300] 
+state = 0
+
+map_dict = {"汪四": "1"}
 
 def Exit():
     global escFlag
@@ -27,16 +35,24 @@ def Exit():
             break  
 
 def FlagController():
-    global timeFlag
-    global skill_flag
+    global skill_flag, shift_flag
     while escFlag == 0:
         time.sleep(1)
         for i in range(len(skill_flag)):
-            skill_flag[i] -= 1
-            if skill_flag[i] < 0:
-                skill_flag[i] = 0
-        print(skill_flag)
+            if skill_flag[i] >= 1:
+                skill_flag[i] -= 1
+        if shift_flag >= 1:
+            shift_flag -= 1
+        # print(skill_flag)
 
+def ShiftController():
+    global shift_flag, speed
+    while escFlag == 0:
+        if speed == 1:
+            if shift_flag == 0:
+                pag.press('shiftleft')
+                shift_flag = 2
+            speed = 0
 
 def show(im, islist = False):
 	if islist:
@@ -47,20 +63,20 @@ def show(im, islist = False):
 		testimage = Image.fromarray(im)
 		testimage.show()
 
-def AngleAndDistance(point1, point2) :
-    vec1 = np.array([0,-10])
-    dx = point2[0] - point1[0]
-    dy = point2[1] - point1[1]
-    vec2 = np.array([dx,dy])
-    Lv1=np.sqrt(vec1.dot(vec1))
-    Lv2=np.sqrt(vec2.dot(vec2))
-    cos_angle=vec1.dot(vec2)/(Lv1*Lv2)
-    angle=np.arccos(cos_angle)
-    angle2=angle*360/2/np.pi - 180
-    if point2[0] - point1[0] < 0:
-        angle2 *= -1
-    # print(angle2)
-    return angle2, Lv2
+def MouthThread(angle):
+    pag.moveRel(angle*2, 0, abs(float(angle/180)))
+    # print('Mouse %f' %angle)
+    # time.sleep(1)
+
+def KeyboardThread(dist):
+    global speed
+    time = float(dist/100)
+    if dist > 100:
+        speed = 1
+        time = (time - 0.5) / 1.5 
+    pag.press('w', interval=time) 
+    print('Move toward %f' %dist)
+    # time.sleep(1)
 
 
 def FindRed(img) :
@@ -98,68 +114,192 @@ def CatchScreen(x, y, w, h):
     # im.show()
     # show(img)
     return text.replace(' ', '')
+        
+def CatchMap(x, y, w, h):
+    pag.screenshot('map.png',region=(x, y, w, h))
+    img = cv2.imread('map.png')
+    return img
 
 def GetScreenPos():
-    global timeFlag
-    while timeFlag <= 2:
+    while True:
         time.sleep(0.5)
         x,y = pag.position()
         print('%f, %f' %(x,y))
 
-
-def MouseMove(angle) :
-    pag.moveRel(angle*2, 0, abs(float(angle/180)))
-
-def KeyboardPress(dist):
-    time = float(dist/100)
-    print('Press Time = %f' %time)
-    pag.press('w', interval=time)
-
-def Skill (i = -1, key = None, time = 0):
+def Skill (i = -1, key = '', time = 0):
     global skill_flag
     if i == -1:
         if skill_flag[0] == 0:
-            pag.press('t')
-            skill_flag[0] = 500 
-        elif skill_flag[0] == 0:
             pag.press('f')
             skill_flag[0] = 10 
-        elif skill_flag[0] == 0:
+        elif skill_flag[1] == 0:
             pag.press('!')
-            skill_flag[0] = 5 
-        elif skill_flag[0] == 0:
+            skill_flag[1] = 6 
+        elif skill_flag[2] == 0:
             pag.press('n')
-            skill_flag[0] = 15 
-        elif skill_flag[0] == 0:
+            skill_flag[2] = 16 
+        elif skill_flag[3] == 0:
             pag.press('r')
-            skill_flag[0] = 26 
+            skill_flag[3] = 26 
+        # elif skill_flag[4] == 0:
+        #     pag.press('t')
+        #     skill_flag[4] = 500 
         else :
             pass
     else :
-        pag.press(key)
-        skill_flag[i] = time
+        if skill_flag[i] == 0:
+            pag.press(key)
+            skill_flag[i] = time
 
-def Act(angle, dist):
-    MouseMove(angle)
-    KeyboardPress(dist)
-    print('Move To dir:%.0f dist:%.0f' %(angle, dist))
+
+def MoveTo(point1, point2, toPoint = True) :  # Center to Point
+    vec1 = np.array([0.0,-10.0])
+    dx = point2[0] - point1[0]
+    dy = point2[1] - point1[1]
+    vec2 = np.array([dx,dy])
+    Lv1=np.sqrt(vec1.dot(vec1))
+    Lv2=np.sqrt(vec2.dot(vec2))     # dist
+    cos_angle=vec1.dot(vec2)/(Lv1*Lv2)
+    angle=np.arccos(cos_angle)
+    angle2=angle*360/2/np.pi
+    if vec2[0] < 0:
+        angle2 *= -1                # angle
+    # Move
+    if toPoint == False:
+        Lv2 -= 20
+
+    mouth_thread = threading.Thread(target = MouthThread, args = (angle2, ))
+    keyboard_thread = threading.Thread(target = KeyboardThread, args = (Lv2, ))
+    # print(vec1)
+    # print(vec2)
+    mouth_thread.start()
+    keyboard_thread.start()
+    if Lv2 >= 100:
+        Skill(5, 'shift', 2)
+    mouth_thread.join()
+    keyboard_thread.join()
+
+def Map() :
+    # text = CatchScreen(880, 33 , 85, 23)
+    text = '火山口M吐'
+    ret = -1
+    if '汪四' in text or '野' in text:
+        print('Map:颶風荒野')
+        ret = 1
+    elif '同' in text or '祭壇' in text:
+        print('Map:風化祭壇')
+        ret = 2
+    elif '深海' in text or '瀑布' in text or '了放' in text or '計生' in text:
+        print('Map:深海瀑布')
+        ret = 3
+    elif '火山' in text or '口' in text or '國' in text:
+        print('Map:火山口地面')
+        ret = 4
+    elif 'pm' in text or 'um' in text or '開' in text:
+        print('Map:銀光藤蔓')
+        ret = 5
+    elif '俘' in text or '審' in text:
+        print('Map:俘虜的審判')
+        ret = 6
+    elif '由記' in text or '由六' in text or '由訂' in text:
+        print('Map:沙沼')
+        ret = 7
+    elif '下和' in text or '下生' in text:
+        print('Map:遇難船隻')
+        ret = 8
+    elif '陽' in text or '景' in text or '台' in text:
+        print('Map:夕陽觀景台')
+        ret = 0
+    else :
+        print('no recg')
+    return ret
+
+def State0 () :
+    global center, state
+    door = [center[0], center[1] + 150]
+    MoveTo(center, door)                # 貼門
+    pag.click(x=500, y=500, duration=2) # 點擊進入
+    time.sleep(5)
+    state += 1
+
+def State1 () :
+    global center, state
+    mapNo = Map()
+    if mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    elif mapNo == 1:
+        point = [10, -200]
+        MoveTo(center, point)
+    else:
+        print('No Map, Stop at state 1')
+    
+    Skill(0, 'f', 10)
+    point = [0, 30]
+    MoveTo(center, point)
+    pag.press('z', presses=3, interval=0.5)
+    state += 1
+
+
+def State2 () :
+    global center, state
+    text = CatchScreen(250, 500, 150,50) # F12的框框
+    if len(text) != 0:
+        pag.press('f12')
+        time.sleep(0.3)
+        pag.click(100,100,duration=0.8)
+        time.sleep(1.0)
+        map = Map()
+        if map == -1 or map == 0: # 成功返回入口
+            state = 0
+        else :
+            state = 2
 
 def AutoMove() :
-    # center = [303, 294]
-    # red = cv2.imread('red.png')
-    # img, point_list = FindRed(red)
-    text = CatchScreen(880, 33 , 85, 23)
-    time.sleep(1)
+    global state    # 0:觀景台 點開始 1:抓地圖 進場 打 撿 2:等一下 看F12 3:活動(有沒有紅點 Y:打->打完回到state0 N:根據地圖走->回到state1)
+    if state == 0 :
+        State0()
+    elif state == 1:
+        State1()
+    elif state == 2:
+        State2()
+    else:
+        pass
+    
+    # center = [303, 294]             # 要修改
+    # red = cv2.imread('red.png')     # 要修改
+    # _, point_list = FindRed(red)
+    # # text = CatchScreen(880, 33 , 85, 23)
+    # # time.sleep(1)
     
     # for point in point_list:
-    #     angle, dist = AngleAndDistance(center, point)
-    #     Act(angle, dist)
+    #     MoveTo(center, point, toPoint = False)
+    #     Skill(0, 'f', 10)
     # time.sleep(1)
 
 
 if __name__ == "__main__":
     # GetScreenPos() # 818 33 1026 63
     # text = CatchScreen(842, 38 , 130, 16)
+    # Map()
 
     print('Press ESC to exit')
     flagThread = threading.Thread(target = FlagController, args = ())
@@ -167,6 +307,9 @@ if __name__ == "__main__":
 
     escThread = threading.Thread(target = Exit, args = ())
     escThread.start()
+
+    speedThread = threading.Thread(target = ShiftController, args = ())
+    speedThread.start()
 
     # AutoMove()
     moveFlag = 0
@@ -193,3 +336,4 @@ if __name__ == "__main__":
 
     flagThread.join()
     escThread.join()
+    speedThread.join()
