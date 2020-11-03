@@ -214,6 +214,11 @@ def Map() :
         print('no recg')
     return ret
 
+def Atttack(enemy) :
+    global center
+    MoveTo(center, enemy, toPoint=False)
+    Skill()
+
 def State0 () :
     global center, state
     door = [center[0], center[1] + 150]
@@ -262,7 +267,7 @@ def State1 () :
 def State2 () :
     global center, state
     text = CatchScreen(250, 500, 150,50) # F12的框框
-    if len(text) != 0:
+    if len(text) != 0:      # 有F12
         pag.press('f12')
         time.sleep(0.3)
         pag.click(100,100,duration=0.8)
@@ -272,6 +277,19 @@ def State2 () :
             state = 0
         else :
             state = 2
+    else :                  # 沒有F12
+        state += 1
+
+def State3  () :
+    global state
+    img = CatchMap(830, 60, 130, 130)        # 填入地圖位置
+    enemy = FindRed(img)
+    if len(enemy) > 0 :
+        Atttack(enemy[-1])
+    else :
+        state = 2
+        time.sleep(1)
+
 
 def AutoMove() :
     global state    # 0:觀景台 點開始 1:抓地圖 進場 打 撿 2:等一下 看F12 3:活動(有沒有紅點 Y:打->打完回到state0 N:根據地圖走->回到state1)
@@ -281,7 +299,10 @@ def AutoMove() :
         State1()
     elif state == 2:
         State2()
+    elif state == 3:
+        State3()
     else:
+        time.sleep(1)
         pass
     
     # center = [303, 294]             # 要修改
