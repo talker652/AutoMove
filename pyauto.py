@@ -1,5 +1,6 @@
 # https://yanwei-liu.medium.com/pyautogui-%E4%BD%BF%E7%94%A8python%E6%93%8D%E6%8E%A7%E9%9B%BB%E8%85%A6-662cc3b18b80
 # https://pyautogui.readthedocs.io/en/latest/keyboard.html
+# http://blog.itpub.net/26736162/viewspace-2644877/
 
 import pyautogui as pag
 import keyboard
@@ -11,6 +12,7 @@ import time
 import threading
 from cv2 import cv2 as cv2
 import pytesseract as pyocr
+import movement
 
 escFlag = 0
 skill_flag = [0] * 6 # skill 4 = buff
@@ -280,7 +282,7 @@ def State2 () :
             state = 0
         else :
             state = 2
-    else :                  # 沒有F12
+    else :     # 沒有F12
         state += 1
 
 def State3  () :
@@ -333,43 +335,46 @@ def AutoMove() :
 
 
 if __name__ == "__main__":
+
+    movement.testmove()
+
     # GetScreenPos() # 818 33 1026 63
     # text = CatchScreen(842, 38 , 130, 16)
     # Map()
 
-    print('Press ESC to exit')
-    flagThread = threading.Thread(target = FlagController, args = ())
-    flagThread.start()
+    # print('Press ESC to exit')
+    # flagThread = threading.Thread(target = FlagController, args = ())
+    # flagThread.start()
 
-    escThread = threading.Thread(target = Exit, args = ())
-    escThread.start()
+    # escThread = threading.Thread(target = Exit, args = ())
+    # escThread.start()
 
-    speedThread = threading.Thread(target = ShiftController, args = ())
-    speedThread.start()
+    # speedThread = threading.Thread(target = ShiftController, args = ())
+    # speedThread.start()
 
-    # AutoMove()
-    moveFlag = 0
-    while escFlag == 0:  # making a loop
-        try:  
-            if keyboard.is_pressed('/'):  
-                moveFlag = 1
-                print('Start')
-                break  
-            else:
-                pass
-        except:
-            break  
+    # # AutoMove()
+    # moveFlag = 0
+    # while escFlag == 0:  # making a loop
+    #     try:  
+    #         if keyboard.is_pressed('/'):  
+    #             moveFlag = 1
+    #             print('Start')
+    #             break  
+    #         else:
+    #             pass
+    #     except:
+    #         break  
     
-    while escFlag == 0:  # making a loop
-        try:  
-            if moveFlag == 1:
-                AutoMove()
-            else:
-                pass
-        except:
-            break  
+    # while escFlag == 0:  # making a loop
+    #     try:  
+    #         if moveFlag == 1:
+    #             AutoMove()
+    #         else:
+    #             pass
+    #     except:
+    #         break  
     
 
-    flagThread.join()
-    escThread.join()
-    speedThread.join()
+    # flagThread.join()
+    # escThread.join()
+    # speedThread.join()
